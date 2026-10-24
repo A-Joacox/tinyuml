@@ -33,6 +33,7 @@ import java.net.URISyntaxException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -46,16 +47,19 @@ import javax.swing.JTabbedPane;
 import javax.swing.JToolBar;
 import javax.swing.SwingUtilities;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import org.tinyuml.draw.Connection;
 import org.tinyuml.draw.Label;
 import org.tinyuml.draw.DiagramElement;
 import org.tinyuml.draw.AbstractCompositeNode;
 import org.tinyuml.draw.LabelChangeListener;
 import org.tinyuml.model.UmlModel;
+import org.tinyuml.model.UmlModelElement;
 import org.tinyuml.util.AppCommandListener;
 import org.tinyuml.umldraw.structure.StructureDiagram;
 import org.tinyuml.umldraw.structure.PackageElement;
 import org.tinyuml.umldraw.structure.ClassElement;
 import org.tinyuml.umldraw.structure.ComponentElement;
+import org.tinyuml.umldraw.shared.UmlDiagramElement;
 import org.tinyuml.umldraw.shared.NoteElement;
 import org.tinyuml.model.UmlModelImpl;
 import org.tinyuml.ui.commands.ModelReader;
@@ -86,6 +90,7 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
   private JLabel coordLabel = new JLabel("    ");
   private JLabel memLabel = new JLabel("    ");
   private JLabel countLabel = new JLabel("    ");
+  private JLabel selectionLabel = new JLabel("    ");
   private UmlModel umlModel;
   private DiagramEditor currentEditor;
   private transient Timer timer = new Timer();
@@ -203,6 +208,7 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
     currentEditor.addAppCommandListener(editorDispatcher);
     currentEditor.addAppCommandListener(this);
     updateElementCount();
+    updateSelectionInfo();
     JScrollPane spane = new JScrollPane(currentEditor);
     JPanel editorPanel = new JPanel(new BorderLayout());
     spane.getVerticalScrollBar().setUnitIncrement(10);
@@ -247,8 +253,11 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
    */
   private void installStatusbar() {
     JPanel statusbar = new JPanel(new BorderLayout());
+    JPanel informationPanel = new JPanel();
+    informationPanel.add(countLabel);
+    informationPanel.add(selectionLabel);
     statusbar.add(coordLabel, BorderLayout.WEST);
-    statusbar.add(countLabel, BorderLayout.CENTER);
+    statusbar.add(informationPanel, BorderLayout.CENTER);
     statusbar.add(memLabel, BorderLayout.EAST);
     getContentPane().add(statusbar, BorderLayout.SOUTH);
   }
@@ -355,6 +364,7 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
    */
   public void selectionStateChanged() {
     boolean hasSelection = getCurrentEditor().getSelectedElements().size() > 0;
+    updateSelectionInfo();
    
     menumanager.enableMenuItem("CUT", hasSelection);
     menumanager.enableMenuItem("COPY", hasSelection);
@@ -365,6 +375,61 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
     toolbarmanager.enableButton("COPY", hasSelection);
      
     toolbarmanager.enableButton("DELETE", hasSelection);
+  }
+
+  /**
+   * Shows the number of selected elements and information about a single
+   * selected element in the status bar.
+   */
+  private void updateSelectionInfo() {
+    List<DiagramElement> selectedElements =
+      getCurrentEditor().getSelectedElements();
+    int selectedCount = selectedElements.size();
+
+    if (selectedCount == 0) {
+      selectionLabel.setText("Seleccionados: 00 | Sin selecci\u00f3n");
+    } else if (selectedCount == 1) {
+      DiagramElement element = selectedElements.get(0);
+      selectionLabel.setText(String.format("Seleccionados: 01 | %s: %s",
+        getElementCategory(element), getElementName(element)));
+    } else {
+      selectionLabel.setText(String.format(
+        "Seleccionados: %02d | Selecci\u00f3n m\u00faltiple", selectedCount));
+    }
+  }
+
+  /**
+   * Returns the user-facing category of a diagram element.
+   * @param element the diagram element
+   * @return the element category
+   */
+  private String getElementCategory(DiagramElement element) {
+    if (element instanceof PackageElement) return "Package";
+    if (element instanceof ClassElement) return "Class";
+    if (element instanceof ComponentElement) return "Component";
+    if (element instanceof NoteElement) return "Note";
+    if (element instanceof Connection) return "Relaci\u00f3n";
+    return "Elemento";
+  }
+
+  /**
+   * Returns the visible name or content of a diagram element.
+   * @param element the diagram element
+   * @return the element name
+   */
+  private String getElementName(DiagramElement element) {
+    String name = null;
+    if (element instanceof NoteElement) {
+      name = ((NoteElement) element).getLabelText();
+    } else if (element instanceof UmlDiagramElement) {
+      UmlModelElement modelElement =
+        ((UmlDiagramElement) element).getModelElement();
+      if (modelElement != null) name = modelElement.getName();
+    }
+    if (name == null || name.trim().length() == 0) {
+      return "Sin nombre";
+    }
+    return name.replace('\n', ' ').replace('\r', ' ').trim();
   }
 
   // ************************************************************************
