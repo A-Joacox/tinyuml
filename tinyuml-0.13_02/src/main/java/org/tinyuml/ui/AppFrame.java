@@ -208,7 +208,7 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
     currentEditor.addAppCommandListener(editorDispatcher);
     currentEditor.addAppCommandListener(this);
     updateElementCount();
-    updateSelectionInfo();
+    updateSelectionInfo(currentEditor.getSelectedElements());
     JScrollPane spane = new JScrollPane(currentEditor);
     JPanel editorPanel = new JPanel(new BorderLayout());
     spane.getVerticalScrollBar().setUnitIncrement(10);
@@ -292,6 +292,9 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
    */
   public void stateChanged(DiagramEditor editor) {
     updateMenuAndToolbars(editor);
+    if (editor == currentEditor) {
+      updateSelectionInfo(editor.getSelectedElements());
+    }
   }
 
   /**
@@ -363,8 +366,10 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
    * {@inheritDoc}
    */
   public void selectionStateChanged() {
-    boolean hasSelection = getCurrentEditor().getSelectedElements().size() > 0;
-    updateSelectionInfo();
+    List<DiagramElement> selectedElements =
+      getCurrentEditor().getSelectedElements();
+    boolean hasSelection = !selectedElements.isEmpty();
+    updateSelectionInfo(selectedElements);
    
     menumanager.enableMenuItem("CUT", hasSelection);
     menumanager.enableMenuItem("COPY", hasSelection);
@@ -380,10 +385,9 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
   /**
    * Shows the number of selected elements and information about a single
    * selected element in the status bar.
+   * @param selectedElements the current selection
    */
-  private void updateSelectionInfo() {
-    List<DiagramElement> selectedElements =
-      getCurrentEditor().getSelectedElements();
+  private void updateSelectionInfo(List<DiagramElement> selectedElements) {
     int selectedCount = selectedElements.size();
 
     if (selectedCount == 0) {

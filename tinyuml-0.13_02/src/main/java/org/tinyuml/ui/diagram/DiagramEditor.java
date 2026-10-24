@@ -445,6 +445,7 @@ DiagramEditorNotification, DiagramOperations, NodeChangeListener {
       Label label = currentEditor.getLabel();
       SetLabelTextCommand command = new SetLabelTextCommand(label, text);
       execute(command);
+      notifyStateChanged();
       currentEditor.hideEditor();
       repaint();
       return true;
@@ -891,6 +892,7 @@ DiagramEditorNotification, DiagramOperations, NodeChangeListener {
         umlclass.setAttributes(dialog.getAttributes());
         umlclass.setStereotypes(dialog.getStereotypes());
         redraw();
+        notifyStateChanged();
       }
     } else if (element instanceof Association) {
       Association association = (Association) element;
@@ -899,6 +901,7 @@ DiagramEditorNotification, DiagramOperations, NodeChangeListener {
       dialog.setLocationRelativeTo(frame);
       dialog.setVisible(true);
       redraw();
+      notifyStateChanged();
     }
   }
 
