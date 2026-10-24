@@ -48,10 +48,15 @@ import javax.swing.SwingUtilities;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import org.tinyuml.draw.Label;
 import org.tinyuml.draw.DiagramElement;
+import org.tinyuml.draw.AbstractCompositeNode;
 import org.tinyuml.draw.LabelChangeListener;
 import org.tinyuml.model.UmlModel;
 import org.tinyuml.util.AppCommandListener;
 import org.tinyuml.umldraw.structure.StructureDiagram;
+import org.tinyuml.umldraw.structure.PackageElement;
+import org.tinyuml.umldraw.structure.ClassElement;
+import org.tinyuml.umldraw.structure.ComponentElement;
+import org.tinyuml.umldraw.shared.NoteElement;
 import org.tinyuml.model.UmlModelImpl;
 import org.tinyuml.ui.commands.ModelReader;
 import org.tinyuml.ui.commands.ModelWriter;
@@ -80,6 +85,7 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
   private JTabbedPane tabbedPane;
   private JLabel coordLabel = new JLabel("    ");
   private JLabel memLabel = new JLabel("    ");
+  private JLabel countLabel = new JLabel("    ");
   private UmlModel umlModel;
   private DiagramEditor currentEditor;
   private transient Timer timer = new Timer();
@@ -196,6 +202,7 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
     currentEditor.addSelectionListener(this);
     currentEditor.addAppCommandListener(editorDispatcher);
     currentEditor.addAppCommandListener(this);
+    updateElementCount();
     JScrollPane spane = new JScrollPane(currentEditor);
     JPanel editorPanel = new JPanel(new BorderLayout());
     spane.getVerticalScrollBar().setUnitIncrement(10);
@@ -241,6 +248,7 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
   private void installStatusbar() {
     JPanel statusbar = new JPanel(new BorderLayout());
     statusbar.add(coordLabel, BorderLayout.WEST);
+    statusbar.add(countLabel, BorderLayout.CENTER);
     statusbar.add(memLabel, BorderLayout.EAST);
     getContentPane().add(statusbar, BorderLayout.SOUTH);
   }
@@ -284,6 +292,7 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
     // spring loading is implemented here
     staticToolbarManager.doClick("SELECT_MODE");
     updateMenuAndToolbars(editor);
+    updateElementCount();
   }
 
   /**
@@ -291,6 +300,7 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
    */
   public void elementRemoved(DiagramEditor editor) {
     updateMenuAndToolbars(editor);
+    updateElementCount();
   }
 
   /**
@@ -303,6 +313,37 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
     menumanager.enableMenuItem("REDO", editor.canRedo());
     toolbarmanager.enableButton("UNDO", editor.canUndo());
     toolbarmanager.enableButton("REDO", editor.canRedo());
+  }
+
+  /**
+   * Shows in the status bar the number of elements of the current diagram,
+   * in total and per category. Connections are not counted.
+   */
+  private void updateElementCount() {
+    int[] counts = new int[4];
+    countElements(getCurrentEditor().getDiagram(), counts);
+    countLabel.setText(String.format("Total Items: %02d | Package: %02d | "
+      + "Class: %02d | Component: %02d | Note: %02d",
+      counts[0] + counts[1] + counts[2] + counts[3],
+      counts[0], counts[1], counts[2], counts[3]));
+  }
+
+  /**
+   * Recursively counts the packages, classes, components and notes contained
+   * in the specified node.
+   * @param node the node to inspect
+   * @param counts the counters for package, class, component and note
+   */
+  private void countElements(AbstractCompositeNode node, int[] counts) {
+    for (DiagramElement child : node.getChildren()) {
+      if (child instanceof PackageElement) counts[0]++;
+      else if (child instanceof ClassElement) counts[1]++;
+      else if (child instanceof ComponentElement) counts[2]++;
+      else if (child instanceof NoteElement) counts[3]++;
+      if (child instanceof AbstractCompositeNode) {
+        countElements((AbstractCompositeNode) child, counts);
+      }
+    }
   }
 
   // ************************************************************************
